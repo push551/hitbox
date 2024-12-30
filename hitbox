@@ -1,0 +1,233 @@
+local active = true
+local trueActive = true
+local reachType = "Sphere"
+local dmgEnabled = true
+local visualizerEnabled = false
+
+-- Оптимизированное создание визуализатора
+local visualizer = Instance.new("Part")
+visualizer.BrickColor = BrickColor.Blue()
+visualizer.Transparency = 0.6
+visualizer.Anchored = true
+visualizer.CanCollide = false
+visualizer.Size = Vector3.new(0.5,0.5,0.5)
+visualizer.BottomSurface = Enum.SurfaceType.Smooth
+visualizer.TopSurface = Enum.SurfaceType.Smooth
+
+-- Мобильный интерфейс
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local ReachLabel = Instance.new("TextLabel")
+local ReachInput = Instance.new("TextBox")
+local ShapeButton = Instance.new("TextButton")
+local DamageButton = Instance.new("TextButton")
+local VisualizerButton = Instance.new("TextButton")
+local CloseButton = Instance.new("TextButton")
+
+-- Настройка мобильного GUI
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999999
+ScreenGui.ResetOnSpawn = false
+
+Frame.Parent = ScreenGui
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+Frame.Size = UDim2.new(0.25, 0, 0.3, 0) -- Уменьшенный размер
+Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+Frame.BorderSizePixel = 2
+Frame.Active = true -- Делаем фрейм активным для перетаскивания
+Frame.Draggable = true -- Включаем возможность перетаскивания
+
+-- Оптимизированные элементы управления с меньшими размерами
+ReachLabel.Parent = Frame
+ReachLabel.Position = UDim2.new(0, 0, 0, 0)
+ReachLabel.Size = UDim2.new(0.4, 0, 0.2, 0)
+ReachLabel.Text = "Reach:"
+ReachLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ReachLabel.TextScaled = true
+
+ReachInput.Parent = Frame
+ReachInput.Position = UDim2.new(0.4, 0, 0, 0)
+ReachInput.Size = UDim2.new(0.5, 0, 0.2, 0)
+ReachInput.Text = "3.5"
+ReachInput.TextColor3 = Color3.fromRGB(0, 0, 255)
+ReachInput.TextScaled = true
+
+ShapeButton.Parent = Frame
+ShapeButton.Position = UDim2.new(0, 0, 0.25, 0)
+ShapeButton.Size = UDim2.new(1, 0, 0.2, 0)
+ShapeButton.Text = "Shape: Sphere"
+ShapeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ShapeButton.TextScaled = true
+
+DamageButton.Parent = Frame
+DamageButton.Position = UDim2.new(0, 0, 0.5, 0)
+DamageButton.Size = UDim2.new(1, 0, 0.2, 0)
+DamageButton.Text = "Damage: ON"
+DamageButton.TextColor3 = Color3.fromRGB(0, 255, 0)
+DamageButton.TextScaled = true
+
+VisualizerButton.Parent = Frame
+VisualizerButton.Position = UDim2.new(0, 0, 0.75, 0)
+VisualizerButton.Size = UDim2.new(1, 0, 0.2, 0)
+VisualizerButton.Text = "Visualizer: OFF"
+VisualizerButton.TextColor3 = Color3.fromRGB(255, 0, 0)
+VisualizerButton.TextScaled = true
+
+CloseButton.Parent = Frame
+CloseButton.Position = UDim2.new(0.9, 0, 0, 0)
+CloseButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 0, 0)
+CloseButton.TextScaled = true
+
+-- Добавляем поддержку перетаскивания для мобильных устройств
+local UserInputService = game:GetService("UserInputService")
+local dragging
+local dragStart
+local startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    Frame.Position = UDim2.new(
+        startPos.X.Scale, 
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale, 
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch and dragging then
+        updateDrag(input)
+    end
+end)
+
+-- Остальной код остается без изменений
+-- Функция onHit
+local function onHit(hit, handle)
+    local victim = hit.Parent:FindFirstChildOfClass("Humanoid")
+    if victim and victim.Parent.Name ~= game.Players.LocalPlayer.Name then
+        if dmgEnabled then
+            for _, v in ipairs(hit.Parent:GetChildren()) do
+                if v:IsA("Part") then
+                    firetouchinterest(v, handle, 0)
+                    firetouchinterest(v, handle, 1)
+                end
+            end
+        else
+            firetouchinterest(hit, handle, 0)
+            firetouchinterest(hit, handle, 1)
+        end
+    end
+end
+
+-- Функция getWhiteList
+local function getWhiteList()
+    local wl = {}
+    for _, v in ipairs(game.Players:GetPlayers()) do
+        if v ~= game.Players.LocalPlayer then
+            local char = v.Character
+            if char then
+                for _, q in ipairs(char:GetChildren()) do
+                    if q:IsA("Part") then
+                        table.insert(wl, q)
+                    end
+                end
+            end
+        end
+    end
+    return wl
+end
+
+-- Обработчики кнопок
+ShapeButton.MouseButton1Click:Connect(function()
+    reachType = reachType == "Sphere" and "Line" or "Sphere"
+    ShapeButton.Text = "Shape: " .. reachType
+end)
+
+DamageButton.MouseButton1Click:Connect(function()
+    dmgEnabled = not dmgEnabled
+    DamageButton.Text = "Damage: " .. (dmgEnabled and "ON" or "OFF")
+    DamageButton.TextColor3 = dmgEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+VisualizerButton.MouseButton1Click:Connect(function()
+    visualizerEnabled = not visualizerEnabled
+    VisualizerButton.Text = "Visualizer: " .. (visualizerEnabled and "ON" or "OFF")
+    VisualizerButton.TextColor3 = visualizerEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    trueActive = false
+    ScreenGui:Destroy()
+end)
+
+-- Основной цикл
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not (active and trueActive) then return end
+    
+    local char = game.Players.LocalPlayer.Character
+    local tool = char and char:FindFirstChildOfClass("Tool")
+    if not tool then 
+        visualizer.Parent = nil
+        return 
+    end
+    
+    local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildOfClass("Part")
+    if not handle then return end
+    
+    if visualizerEnabled then
+        visualizer.Parent = workspace
+    else
+        visualizer.Parent = nil
+    end
+    
+    local reach = tonumber(ReachInput.Text) or 3.5
+    
+    if reachType == "Sphere" then
+        visualizer.Shape = Enum.PartType.Ball
+        visualizer.Size = Vector3.new(reach, reach, reach)
+        visualizer.CFrame = handle.CFrame
+        
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and (hrp.Position - handle.Position).Magnitude <= reach then
+                onHit(hrp, handle)
+            end
+        end
+    else
+        local origin = (handle.CFrame * CFrame.new(0, 0, -2)).Position
+        local ray = Ray.new(origin, handle.CFrame.LookVector * -reach)
+        local part = workspace:FindPartOnRayWithWhitelist(ray, getWhiteList())
+        
+        visualizer.Shape = Enum.PartType.Block
+        visualizer.Size = Vector3.new(1, 0.8, reach)
+        visualizer.CFrame = handle.CFrame * CFrame.new(0, 0, (reach/2) + 2)
+        
+        if part then
+            onHit(part, handle)
+        else
+            for _, v in ipairs(handle:GetTouchingParts()) do
+                onHit(v, handle)
+            end
+        end
+    end
+end)
+
+repeat wait() until game.Players.LocalPlayer
+ScreenGui.Parent = game:GetService("CoreGui")
